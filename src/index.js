@@ -1,104 +1,154 @@
 const staticFiles = {
-	'/index.html': `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Live Stream Links</title>
-	<link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="https://unpkg.byted-static.com/xgplayer/3.0.10/dist/index.min.css">
-</head>
-<body>
-	<h1>Live Stream Links</h1>
-	<div id="live-urls" class="card-container"></div>
-  <script src="https://unpkg.byted-static.com/xgplayer/3.0.10/dist/index.min.js" charset="utf-8"></script>
-  <script src="https://unpkg.byted-static.com/xgplayer-mp4/3.0.10/dist/index.min.js" charset="utf-8"></script>
-  <script src="//unpkg.com/xgplayer-hls@latest/dist/index.min.js"></script>
-  <script src="//unpkg.com/xgplayer@latest/dist/index.min.js"></script>
-<script src="//unpkg.com/xgplayer@latest/dist/index.min.css"></script>
-<script src="//unpkg.com/xgplayer-flv@latest/dist/index.min.js"></script>
-	<script src="app.js"></script>
-</body>
-</html>
-`,
-	'/app.js': `
-document.addEventListener('DOMContentLoaded', async () => {
-	const response = await fetch('/api/links');
-	const liveUrls = await response.json();
-	const liveUrlsContainer = document.getElementById('live-urls');
-	liveUrls.forEach(({ user, live_stream_link }) => {
-		const userDiv = document.createElement('div');
-		userDiv.className = 'card';
-		userDiv.innerHTML = \`
-			<h2>\${user}</h2>
-			<div id="player-\${user}" class="player"></div>
-		\`;
-		liveUrlsContainer.appendChild(userDiv);
+	'/index.html': `<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,minimal-ui" />
+		<meta name="referrer" content="no-referrer" />
+		<title>tiktok直播大屏</title>
+		<style type="text/css">
+			html,
+			body {
+				width: 100%;
+				padding: 0;
+				margin: 0;
+			}
+			#container {
+				width: 100%;
+				display: flex;
+				justify-content: center;
+				flex-flow: row wrap;
+				row-gap: 5px;
+			}
+			#container .item {
+				min-width: 25vw;
+				font-size: 0;
+				box-sizing: border-box;
+			}
 
-		if (live_stream_link) {
-			const player = new Player({
-				id: 'player-' + user,
-				url: live_stream_link,
-				autoplay: true,
-				volume: 0.3,
-				autoplayMuted: true,
-				playsinline: true,
-				width: 300,
-				plugins: [window.FlvPlayer]
-			});
-		}
-	});
-});
-`,
-	'/style.css': `
-body {
-	font-family: Arial, sans-serif;
-	margin: 0;
-	padding: 20px;
-	background-color: #f0f0f0;
-}
+			@media screen and (max-width: 600px) {
+				#container .item {
+					max-width: 100vw;
+					min-width: 100vw;
+					font-size: 0;
+					box-sizing: border-box;
+				}
+			}
+			.xgplayer {
+				width: 100% !important;
+				background-color: transparent !important;
+			}
+			.item:has(.xgplayer-is-error) {
+				display: none;
+			}
+			.item {
+				position: relative;
+			}
+			.item > .live-name {
+				position: absolute;
+				top: 4px;
+				left: 0;
+				width: 100%;
+				text-align: center;
+				color: #303133;
+				font-size: 20px;
+				z-index: 9999;
+				font-weight: 600;
+			}
+		</style>
+		<link rel="stylesheet" href="https://unpkg.byted-static.com/xgplayer/3.0.10/dist/index.min.css" />
+	</head>
+	<body>
+		<div id="container"></div>
+		<script src="https://unpkg.byted-static.com/xgplayer/3.0.10/dist/index.min.js" charset="utf-8"></script>
+		<script src="https://unpkg.byted-static.com/xgplayer-mp4/3.0.10/dist/index.min.js" charset="utf-8"></script>
+		<script src="//unpkg.com/xgplayer-hls@latest/dist/index.min.js"></script>
+		<script src="//unpkg.com/xgplayer@latest/dist/index.min.js"></script>
+		<script src="//unpkg.com/xgplayer@latest/dist/index.min.css"></script>
+		<script src="//unpkg.com/xgplayer-flv@latest/dist/index.min.js"></script>
+		<script type="text/javascript">
+			const run = async() => {
+				const response = await fetch('/api/links')
+				const liveUrls = await response.json() ?? []
+				// 如果里面 live_stream_link 全部是空的，那么使用 window.liveStreamUrls 中的数据
+				if (liveUrls.every(({ live_stream_link }) => !live_stream_link)) {
+					liveUrls = window.liveStreamUrls
+				}
+				let MAX_COL = 4 //最多3列
+				const config = {
+					autoplayMuted: true,
+					autoplay: true,
+					volume: 0,
+					playsinline: true,
+					controls: false,
+					plugins: [window.FlvPlayer]
+				}
 
-h1 {
-	text-align: center;
-}
+				const playerConfig = liveUrls.map(({ live_stream_link: url, user }) => ({ url, ...config, user }))
+				const count = playerConfig.length
+				/**
+				 * 非立即执行防抖函数
+				 * @param {Function} func
+				 * @param {number} delay
+				 * @returns
+				 */
+				const debounce = (func, delay = 500) => {
+					let timeout
+					return function () {
+						const _this = this
+						const args = [...arguments]
+						if (timeout) {
+							clearTimeout(timeout)
+						}
+						timeout = setTimeout(() => {
+							func.apply(_this, args)
+						}, delay)
+					}
+				}
 
-.card-container {
-	display: flex;
-	flex-wrap: wrap;
-	justify-content: center;
-}
+				const initLive = () => {
+					let el = ''
+					for (let i = 0; i < count; i++) {
+						const liveNameEl = playerConfig[i]?.user ? \`<span class="live-name">\${playerConfig[i].user}</span>\` : \`\`
+						el += \`<div class="item">\${liveNameEl}<div class="warp"></div></div>\`
+					}
+					container.innerHTML = el
 
-.card {
-	background-color: #fff;
-	border: 1px solid #ddd;
-	border-radius: 10px;
-	padding: 10px;
-	margin: 10px;
-	width: 300px;
-	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
+					const ids = document.querySelectorAll('#container .warp')
+					const players = playerConfig.map((config, index) => ({ p: new Player({ ...config, el: ids[index] }), el: ids[index] }))
+					const Events = window.Player.Events
+					players.forEach(({ p, el }) => {
+						p.on(Events.ERROR, () => {
+							container.removeChild(el.parentElement)
+							layout()
+						})
+					})
+				}
 
-.card h2 {
-	margin: 0 0 10px;
-	text-align: center;
-}
+				const layout = debounce(() => {
+					const playerEl = [...document.querySelectorAll('#container .warp')]
+					const playerLength = playerEl.length
+					const col = Math.ceil(playerLength / MAX_COL)
+					container.style.justifyContent = playerLength < MAX_COL ? 'center' : 'flex-start'
+					const w = window.innerWidth
+					const h = \`\${w <= 600 ? window.innerHeight : window.innerHeight / col}px\`
+					for (let i = 0; i < count; i++) {
+						if (playerEl[i]) {
+							playerEl[i].style.height = h
+							playerEl[i].parentElement.style.minWidth = \`\${playerLength >= 9 ? 33.333 : 25}vw\`
+						}
+					}
+				})
 
-.player {
-	width: 100%;
-	height: 0;
-	padding-bottom: 56.25%; /* 16:9 aspect ratio */
-	position: relative;
-}
-
-.player video {
-	position: absolute;
-	width: 100%;
-	height: 100%;
-	top: 0;
-	left: 0;
-}
-`
+				initLive()
+				layout()
+				window.addEventListener('resize', layout)
+			}
+			
+			run()
+		</script>
+	</body>
+</html>`
 };
 
 // The rest of your code remains unchanged
