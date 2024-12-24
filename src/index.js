@@ -68,8 +68,8 @@ const staticFiles = {
 		<script src="//unpkg.com/xgplayer-flv@latest/dist/index.min.js"></script>
 		<script type="text/javascript">
 			const run = async() => {
-				const response = await fetch('/api/links')
-				const liveUrls = await response.json() ?? []
+				const response = await fetch('https://tiktok-live.phpman.top/api/links', {headers:{ 'X-Region': 'us' }})
+				let liveUrls = await response.json() ?? []
 				// 如果里面 live_stream_link 全部是空的，那么使用 window.liveStreamUrls 中的数据
 				if (liveUrls.every(({ live_stream_link }) => !live_stream_link)) {
 					liveUrls = window.liveStreamUrls
@@ -154,7 +154,7 @@ const staticFiles = {
 // The rest of your code remains unchanged
 const fetchJson = async (url) => {
 	// 强制使用 us 地区
-	const response = await fetch(url, { 'X-Region': 'us' });
+	const response = await fetch(url, {headers:{ 'X-Region': 'us' }});
 	if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 	return await response.json();
 };
