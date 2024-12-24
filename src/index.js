@@ -153,7 +153,8 @@ const staticFiles = {
 
 // The rest of your code remains unchanged
 const fetchJson = async (url) => {
-	const response = await fetch(url);
+	// 强制使用 us 地区
+	const response = await fetch(url, { 'X-Region': 'us' });
 	if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 	return await response.json();
 };
