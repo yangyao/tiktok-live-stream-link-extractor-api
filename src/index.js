@@ -1,3 +1,71 @@
+const staticFiles = {
+	'/index.html': `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Live Stream Links</title>
+	<link rel="stylesheet" href="style.css">
+</head>
+<body>
+	<h1>Live Stream Links</h1>
+	<div id="live-urls"></div>
+	<script src="app.js"></script>
+</body>
+</html>
+`,
+	'/app.js': `
+document.addEventListener('DOMContentLoaded', async () => {
+	const response = await fetch('/api/links');
+	const liveUrls = await response.json();
+	const liveUrlsContainer = document.getElementById('live-urls');
+	liveUrls.forEach(({ user, live_stream_link }) => {
+		const userDiv = document.createElement('div');
+		userDiv.className = 'user';
+		userDiv.innerHTML = \`
+			<h2>\${user}</h2>
+			<p><a href="\${live_stream_link}" target="_blank">\${live_stream_link}</a></p>
+		\`;
+		liveUrlsContainer.appendChild(userDiv);
+	});
+});
+`,
+	'/style.css': `
+body {
+	font-family: Arial, sans-serif;
+	margin: 0;
+	padding: 20px;
+	background-color: #f0f0f0;
+}
+
+h1 {
+	text-align: center;
+}
+
+.user {
+	background-color: #fff;
+	border: 1px solid #ddd;
+	border-radius: 5px;
+	padding: 10px;
+	margin: 10px 0;
+}
+
+.user h2 {
+	margin: 0 0 10px;
+}
+
+.user a {
+	color: #007bff;
+	text-decoration: none;
+}
+
+	user a:hover {
+	text-decoration: underline;
+}
+`
+};
+
 const httpGet = async (url) => {
 	const response = await fetch(url);
 	if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -31,13 +99,37 @@ const getRoomIdFromUser = async (user) => {
 	return roomId;
 };
 
+const getContentType = (path) => {
+	if (path.endsWith(".html")) return "text/html";
+	if (path.endsWith(".js")) return "application/javascript";
+	if (path.endsWith(".css")) return "text/css";
+	return "text/plain";
+};
+
 export default {
 	async fetch(request) {
+		const url = new URL(request.url);
+		const path = url.pathname;
+
+		// Serve static files (HTML, CSS, JS)
+		if (staticFiles[path]) {
+			return new Response(staticFiles[path], {
+				headers: { "Content-Type": getContentType(path) },
+			});
+		}
+
+		// Serve index.html for the root path
+		if (url.pathname === '/' || url.pathname === '') {
+			return new Response(staticFiles['/index.html'], {
+				headers: { "Content-Type": "text/html" },
+			});
+		}
+
 		const users = [
 			'ohsomefunhouse', 'ohsomescents', 'ohsomebeautyofficial', 'ohsomelovelytoys',
 			'ohsometrends', 'ohsomecollections', 'ohsomeunboxfun', 'ohsome.bricksworld', 'ohsometravel'
 		];
-		const url = new URL(request.url);
+
 		if (url.pathname === '/api/links') {
 			const params = new URLSearchParams(url.search);
 			let additionalUsers = [];
