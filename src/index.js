@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 				url: live_stream_link,
 				autoplay: true,
 				volume: 0.3,
-				autoplay: true,
+				autoplayMuted: true,
 				playsinline: true,
 				width: 300,
 				plugins: [window.FlvPlayer]
