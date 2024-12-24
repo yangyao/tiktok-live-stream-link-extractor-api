@@ -7,10 +7,17 @@ const staticFiles = {
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Live Stream Links</title>
 	<link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://unpkg.byted-static.com/xgplayer/3.0.10/dist/index.min.css">
 </head>
 <body>
 	<h1>Live Stream Links</h1>
-	<div id="live-urls"></div>
+	<div id="live-urls" class="card-container"></div>
+  <script src="https://unpkg.byted-static.com/xgplayer/3.0.10/dist/index.min.js" charset="utf-8"></script>
+  <script src="https://unpkg.byted-static.com/xgplayer-mp4/3.0.10/dist/index.min.js" charset="utf-8"></script>
+  <script src="//unpkg.com/xgplayer-hls@latest/dist/index.min.js"></script>
+  <script src="//unpkg.com/xgplayer@latest/dist/index.min.js"></script>
+<script src="//unpkg.com/xgplayer@latest/dist/index.min.css"></script>
+<script src="//unpkg.com/xgplayer-flv@latest/dist/index.min.js"></script>
 	<script src="app.js"></script>
 </body>
 </html>
@@ -22,12 +29,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 	const liveUrlsContainer = document.getElementById('live-urls');
 	liveUrls.forEach(({ user, live_stream_link }) => {
 		const userDiv = document.createElement('div');
-		userDiv.className = 'user';
+		userDiv.className = 'card';
 		userDiv.innerHTML = \`
 			<h2>\${user}</h2>
-			<p><a href="\${live_stream_link}" target="_blank">\${live_stream_link}</a></p>
+			<div id="player-\${user}" class="player"></div>
 		\`;
 		liveUrlsContainer.appendChild(userDiv);
+
+		if (live_stream_link) {
+			const player = new Player({
+				id: 'player-' + user,
+				url: live_stream_link,
+				autoplay: true,
+				volume: 0.3,
+				autoplay: true,
+				playsinline: true,
+				width: 300,
+				plugins: [window.FlvPlayer]
+			});
+		}
 	});
 });
 `,
@@ -43,29 +63,45 @@ h1 {
 	text-align: center;
 }
 
-.user {
+.card-container {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+}
+
+.card {
 	background-color: #fff;
 	border: 1px solid #ddd;
-	border-radius: 5px;
+	border-radius: 10px;
 	padding: 10px;
-	margin: 10px 0;
+	margin: 10px;
+	width: 300px;
+	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-.user h2 {
+.card h2 {
 	margin: 0 0 10px;
+	text-align: center;
 }
 
-.user a {
-	color: #007bff;
-	text-decoration: none;
+.player {
+	width: 100%;
+	height: 0;
+	padding-bottom: 56.25%; /* 16:9 aspect ratio */
+	position: relative;
 }
 
-.user a:hover {
-	text-decoration: underline;
+.player video {
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	top: 0;
+	left: 0;
 }
 `
 };
 
+// The rest of your code remains unchanged
 const fetchJson = async (url) => {
 	const response = await fetch(url);
 	if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
